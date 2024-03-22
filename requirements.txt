@@ -1,0 +1,9 @@
+aiogram==3.4.1
+environs==11.0.0
+psycopg==3.1.18
+psycopg-binary==3.1.18
+pydantic==2.5.3
+pydantic-settings==2.2.1
+Wikipedia
+sqlalchemy==2.0.28
+requests
