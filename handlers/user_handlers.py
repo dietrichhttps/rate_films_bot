@@ -63,6 +63,7 @@ async def process_film_title_sent(message: Message, state: FSMContext):
     else:
         await message.answer('К сожалению, по вашему запросу ничего найдено')
 
+
 # Этот хэндлер будет срабатаывать при нажатие на кнопку с предложенным
 # фильмом
 @router.callback_query(StateFilter(FSMRateFilm.send_title),
