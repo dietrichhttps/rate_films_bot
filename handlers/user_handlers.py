@@ -55,11 +55,13 @@ async def process_film_title_sent(message: Message, state: FSMContext):
     query_title = message.text
     suggestions = search_films(query_title)
 
-    await message.answer(
-        text='Выберите фильм',
-        reply_markup=create_suggestions_keyboard(suggestions)
-    )
-
+    if suggestions:
+        await message.answer(
+            text='Выберите фильм',
+            reply_markup=create_suggestions_keyboard(suggestions)
+        )
+    else:
+        await message.answer('К сожалению, по вашему запросу ничего найдено')
 
 # Этот хэндлер будет срабатаывать при нажатие на кнопку с предложенным
 # фильмом
