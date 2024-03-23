@@ -156,6 +156,7 @@ async def process_my_film_press(callback: CallbackQuery):
 
 # Этот хэндлер будет срабатывать на нажатие кнопки "Оценка" в клавиатуре
 # create_film_info_keyboard
-@router.callback_query(StateFilter(FSMMyFilms.my_films), F.data == 'my_film_rate')
+@router.callback_query(StateFilter(FSMMyFilms.my_films),
+                       F.data == 'my_film_rate')
 async def process_my_films_rate_press(callback: CallbackQuery):
     pass
