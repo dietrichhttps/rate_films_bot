@@ -1,4 +1,6 @@
-from sqlalchemy import select, Integer, Text, func
+from sqlalchemy import select
+from sqlalchemy.orm import Query
+
 from database.database import sync_engine, session_factory
 from database.models import Film, Rate, Base
 
@@ -20,6 +22,22 @@ class FilmORM:
             result = session.execute(query).scalar()
 
         return result
+
+    @staticmethod
+    def get_all_films() -> dict[int, str] | None:
+        with session_factory() as session:
+            result = session.query(Film).all()
+
+            films: dict[int, str] = {film.id: film.title for film in result}
+
+        return films
+
+    @staticmethod
+    def get_film(film_id: int) -> Film:
+        with session_factory() as session:
+            query: Query = session.query(Film).filter(Film.id == film_id)
+            film = query.first()
+        return film
 
     @staticmethod
     def set_film(title: str, wiki_link: str) -> None:
