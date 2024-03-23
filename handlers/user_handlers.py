@@ -10,7 +10,10 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from lexicon.lexicon import LEXICON
 from filters.filters import IsRate
 from services.film_service import search_films
-from keyboards.films_kb import create_suggestions_keyboard
+from keyboards.films_kb import (create_suggestions_keyboard,
+                                create_film_info_keyboard,
+                                create_my_films_keyboard,
+                                create_all_my_films_keyboard)
 from keyboards.rates_kb import create_rates_keyboard
 
 from database.orm import FilmORM, RateORM
@@ -30,9 +33,9 @@ class FSMReviewFilm(StatesGroup):
     send_review = State()
 
 
-class FSMFilmsData(StatesGroup):
-    my_rates = State()
+class FSMMyFilms(StatesGroup):
     my_films = State()
+    my_rates = State()
 
 
 # Этот хэндлер будет срабатывать на команду "/start" -
@@ -77,7 +80,7 @@ async def process_suggestion_press(callback: CallbackQuery, state: FSMContext):
     wiki_link = temp_data['suggestions'][title]
     await state.update_data(title=title, wiki_link=wiki_link, suggestions=None)
 
-    await callback.message.answer(
+    await callback.message.edit_text(
         text='Отправьте оценку',
         reply_markup=create_rates_keyboard()
     )
@@ -91,7 +94,7 @@ async def process_film_rate_sent(callback: CallbackQuery, state: FSMContext):
     rate = int(callback.data.split('rate-')[1])
     await state.update_data(rate=rate)
 
-    await callback.message.answer('Оценка принята!')
+    await callback.answer('Оценка принята!')
     await callback.answer()
 
     film_data = await state.get_data()
@@ -106,9 +109,53 @@ async def process_film_rate_sent(callback: CallbackQuery, state: FSMContext):
 
 # Этот хэндлер будет срабатывать, если во время отправки
 # оценки будет введенено что-то не то
-@router.message(StateFilter(FSMRateFilm.send_rate))
-async def warning_not_rate(message: Message):
-    await message.answer(
+@router.callback_query(StateFilter(FSMRateFilm.send_rate))
+async def warning_not_rate(callbback: CallbackQuery):
+    await callbback.answer(
         text='Оценка должна быть по 10 балльной шкале\n\n'
              'Попробуйте еще раз!')
 
+
+# Этот хэндлер будет срабатывать на команду /my_films
+@router.message(Command(commands='my_films'), StateFilter(default_state))
+async def process_my_films_command(message: Message, state: FSMContext):
+    await state.set_state(FSMMyFilms.my_films)
+    await message.answer(
+        text='Выберите категорию',
+        reply_markup=create_my_films_keyboard()
+    )
+
+
+# Этот хэндлер будет срабатывать при нажатии кнопки "Все фильмы"
+@router.callback_query(StateFilter(FSMMyFilms.my_films), F.data == 'all_films')
+async def process_all_films_press(callback: CallbackQuery, state: FSMContext):
+    films = FilmORM.get_all_films()
+
+    if films:
+        await callback.message.edit_text(
+            text='Список ваших фильмов',
+            reply_markup=create_all_my_films_keyboard(films)
+        )
+        await callback.answer()
+    else:
+        await callback.answer('У вас пока нет фильмов')
+
+
+# Этот хэндлер будет срабатывать на нажатие фильма в категории "Все фильмы"
+@router.callback_query(StateFilter(FSMMyFilms.my_films),
+                       F.data.startswith('my_film-'))
+async def process_my_film_press(callback: CallbackQuery):
+    film_id = int(callback.data.split('my_film-')[1])
+    title = FilmORM.get_film(film_id).title
+    await callback.message.edit_text(
+        text=title,
+        reply_markup=create_film_info_keyboard()
+    )
+    await callback.asnwer()
+
+
+# Этот хэндлер будет срабатывать на нажатие кнопки "Оценка" в клавиатуре
+# create_film_info_keyboard
+@router.callback_query(StateFilter(FSMMyFilms.my_films), F.data == 'my_film_rate')
+async def process_my_films_rate_press(callback: CallbackQuery):
+    pass
