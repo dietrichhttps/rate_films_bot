@@ -4,10 +4,10 @@ from sqlalchemy.orm import relationship
 from database.database import Base
 
 # Создаем таблицу для связи между фильмами и оценками
-film_rating_association = Table(
-    'film_rating_association', Base.metadata,
+film_rate_association = Table(
+    'film_rate_association', Base.metadata,
     Column('film_id', Integer, ForeignKey('films.id')),
-    Column('rating_id', Integer, ForeignKey('ratings.id')),
+    Column('rate_id', Integer, ForeignKey('rates.id')),
 )
 
 
@@ -19,16 +19,16 @@ class Film(Base):
     wiki_link = Column(Text)
 
     # Определяем отношение "много ко многим" к оценкам
-    ratings = relationship('Rate', secondary=film_rating_association,
-                           back_populates='films')
+    rates = relationship('Rate', secondary=film_rate_association,
+                         back_populates='films')
 
 
 class Rate(Base):
-    __tablename__ = 'ratings'
+    __tablename__ = 'rates'
 
     id = Column(Integer, primary_key=True)
-    rating = Column(Integer)
+    rate = Column(Integer)
 
     # Определяем отношение "много ко многим" к книгам
-    films = relationship('Film', secondary=film_rating_association,
-                         back_populates='ratings')
+    films = relationship('Film', secondary=film_rate_association,
+                         back_populates='rates')
