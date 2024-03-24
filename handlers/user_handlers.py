@@ -23,16 +23,19 @@ storage = MemoryStorage()
 logger = logging.getLogger(__name__)
 
 
+# Группа состояний для команды /rate_film
 class FSMRateFilm(StatesGroup):
     send_title = State()
     send_rating = State()
 
 
+# Группа состояний для команды /review_film
 class FSMReviewFilm(StatesGroup):
     send_title = State()
     send_review = State()
 
 
+# Группа состояний для команды /my_films
 class FSMMyFilms(StatesGroup):
     my_films = State()
     my_ratings = State()
