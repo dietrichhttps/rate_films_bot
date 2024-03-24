@@ -96,11 +96,11 @@ async def process_suggestion_press(callback: CallbackQuery, state: FSMContext):
         reply_markup=create_ratings_keyboard()
     )
     await callback.answer()
-    await state.set_state(FSMRateFilm.send_rate)
+    await state.set_state(FSMRateFilm.send_rating)
 
 
 # Этот хэндлер будет срабатывать на оценку фильма
-@router.callback_query(StateFilter(FSMRateFilm.send_rate), IsRating())
+@router.callback_query(StateFilter(FSMRateFilm.send_rating), IsRating())
 async def process_film_rating_sent(callback: CallbackQuery, state: FSMContext):
     rating = int(callback.data.split('rating-')[1])
     await state.update_data(rating=rating)
