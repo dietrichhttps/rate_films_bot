@@ -19,8 +19,8 @@ class Film(Base):
     wiki_link = Column(Text)
 
     # Определяем отношение "много ко многим" к оценкам
-    rates = relationship('Rate', secondary=film_rating_association,
-                         back_populates='films')
+    ratings = relationship('Rate', secondary=film_rating_association,
+                           back_populates='films')
 
 
 class Rate(Base):
