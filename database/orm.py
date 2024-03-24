@@ -47,7 +47,7 @@ class FilmORM:
             session.commit()
 
 
-class RateORM:
+class RatingORM:
     @staticmethod
     def set_rating(film_id: int, rating: int) -> None:
         with session_factory() as session:
