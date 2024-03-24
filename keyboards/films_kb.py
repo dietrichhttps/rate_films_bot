@@ -23,16 +23,16 @@ def create_my_films_keyboard() -> InlineKeyboardMarkup:
         text='Все фильмы',
         callback_data='all_films'
     )
-    films_by_rate_btn = InlineKeyboardButton(
+    films_by_rating_btn = InlineKeyboardButton(
         text='Фильмы по оценкам',
-        callback_data='films_by_rate'
+        callback_data='films_by_rating'
     )
     search_my_films_btn = InlineKeyboardButton(
         text='Поиск фильмов 🔎',
         callback_data='search_my_films'
     )
     kb_builder.row(
-        all_films_btn, films_by_rate_btn,
+        all_films_btn, films_by_rating_btn,
         width=2
     )
     kb_builder.row(search_my_films_btn)
@@ -53,9 +53,9 @@ def create_all_my_films_keyboard(
 
 def create_film_info_keyboard() -> InlineKeyboardMarkup:
     kb_builder = InlineKeyboardBuilder()
-    rate_btn = InlineKeyboardButton(
+    rating_btn = InlineKeyboardButton(
         text='Оценка',
-        callback_data='my_film_rate'
+        callback_data='my_film_rating'
     )
     review_btn = InlineKeyboardButton(
         text='Рецензия',
@@ -63,8 +63,8 @@ def create_film_info_keyboard() -> InlineKeyboardMarkup:
     )
     wiki_link_btn = InlineKeyboardButton(
         text='Страница в Википедии',
-        callback_data='my_film_rate'
+        callback_data='my_film_rating'
     )
-    kb_builder.row(rate_btn, review_btn, width=2)
+    kb_builder.row(rating_btn, review_btn, width=2)
     kb_builder.row(wiki_link_btn)
     return kb_builder.as_markup()
