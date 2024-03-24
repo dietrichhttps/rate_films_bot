@@ -49,13 +49,13 @@ class FilmORM:
 
 class RateORM:
     @staticmethod
-    def set_rating(film_id: int, rate: int) -> None:
+    def set_rating(film_id: int, rating: int) -> None:
         with session_factory() as session:
             # Получаем объект фильма по его идентификатору
             film = session.query(Film).filter_by(id=film_id).first()
             if film:
                 # Создаем объект оценки и присваиваем ему значение
-                new_rating = Rate(rating=rate)
+                new_rating = Rate(ratinf=rating)
                 # Связываем оценку с фильмом
                 film.ratings.append(new_rating)
                 # Добавляем новую оценку и фиксируем изменения в базе данных
