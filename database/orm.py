@@ -55,7 +55,7 @@ class RatingORM:
             film = session.query(Film).filter_by(id=film_id).first()
             if film:
                 # Создаем объект оценки и присваиваем ему значение
-                new_rating = Rate(ratinf=rating)
+                new_rating = Rate(rating=rating)
                 # Связываем оценку с фильмом
                 film.ratings.append(new_rating)
                 # Добавляем новую оценку и фиксируем изменения в базе данных
