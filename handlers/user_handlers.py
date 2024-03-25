@@ -9,9 +9,10 @@ from aiogram.fsm.state import default_state
 from lexicon.lexicon import LEXICON
 from filters.filters import IsRating
 from services.film_service import search_films
-from keyboards.keyboards import MainMenu, RateFilmMenu, MyFilmsMenu
+from keyboards.keyboards import MainMenu, RateFilmMenu, MyFilmsMenu, StartMenu
 from database.orm import FilmORM, RatingORM
-from states.states import (FSMMainMenu, FSMRateFilmMenu, FSMMyFilmsMenu)
+from states.states import (FSMMainMenu, FSMRateFilmMenu, FSMMyFilmsMenu,
+                           FSMStartMenu)
 from states.state_management import StateLinkedList
 
 router = Router()
@@ -25,15 +26,23 @@ class StartCommandHandler:
     # добавлять пользователя в базу данных, если его там еще не было
     # и отправлять ему приветственное сообщение
     @router.message(CommandStart(), StateFilter(default_state))
-    async def process_start_command(message: Message):
-        await message.answer(LEXICON[message.text])
+    async def process_start_command(message: Message, state: FSMContext):
+        current_state = FSMStartMenu.start_menu
+        state_list.add_state(current_state)
+        await state.set_state(FSMStartMenu.start_menu)
+
+        await message.answer(
+            text=LEXICON[message.text],
+            reply_markup=StartMenu.create_start_menu_kb())
 
 
 # Класс, содержащий обработчик команды /main_menu
 class MainMenuCommandHandler:
     # Этот хэндлер будет срабатывать на команду /main_menu
-    @router.message(Command(commands='main_menu'), StateFilter(default_state))
-    async def process_main_menu_command(message: Message, state: FSMContext):
+    @router.callback_query(F.data == 'main_menu',
+                           StateFilter(FSMStartMenu.start_menu))
+    async def process_main_menu_command(callback: CallbackQuery,
+                                        state: FSMContext):
         # Текст над клавиатурой
         text = 'Главное меню'
         # Ссылка на клавиатуру
@@ -54,7 +63,7 @@ class MainMenuCommandHandler:
         await state.set_state(current_state)
 
         # Отправляем ответ пользователюи
-        await message.answer(
+        await callback.message.edit_text(
             text=text,
             reply_markup=reply_markup()
         )
