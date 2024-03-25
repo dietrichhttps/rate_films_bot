@@ -29,11 +29,16 @@ class StartCommandHandler:
     async def process_start_command(message: Message, state: FSMContext):
         current_state = FSMStartMenu.start_menu
         state_list.add_state(current_state)
+        text = LEXICON[message.text]
+        reply_markup = StartMenu.create_start_menu_kb
+        message_data = (text, reply_markup)
+        state_data = {'message_data': message_data}
+        await state.update_data(start_menu=state_data)
         await state.set_state(FSMStartMenu.start_menu)
 
         await message.answer(
-            text=LEXICON[message.text],
-            reply_markup=StartMenu.create_start_menu_kb())
+            text=text,
+            reply_markup=reply_markup())
 
 
 # Класс, содержащий обработчик команды /main_menu
@@ -297,3 +302,21 @@ class NavigationCommandHandler:
 
         # Возвращаем пользователя в предыдущее состояние
         await state.set_state(prev_state)
+
+    # Этот хэндлер будет срабатывать при нажатии кнопки "Отмена"
+    @router.callback_query(F.data == 'cancel', ~StateFilter(default_state))
+    async def process_cancel_press(callback: CallbackQuery, state: FSMContext):
+        # Получаем словарь из MemoryStorage()
+        storage_data = await state.get_data()
+        # Получаем данные для отправки ответа
+        message_data = storage_data['start_menu']['message_data']
+        text, reply_markup = message_data
+
+        # Отправляем ответ из меню старта
+        await callback.message.edit_text(
+            text=text,
+            reply_markup=reply_markup()
+        )
+
+        # Возвращаем пользователя в состояние стартового меню
+        await state.set_state(FSMStartMenu.start_menu)
