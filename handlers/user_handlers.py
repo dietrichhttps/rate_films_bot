@@ -110,7 +110,7 @@ class RateFilmCommandHandler:
         # Текст над клавиатурой
         text = 'Выберите фильм'
         # Ссылка на клавиатуру
-        reply_markup = RateFilmMenu.create_suggestions_kb
+        reply_markup = RateFilmMenu.create_suggestions_menu_kb
         # Данные для формирования ответа пользователю
         message_data = {'text': text, 'reply_markup': reply_markup}
 
@@ -169,7 +169,7 @@ class RateFilmCommandHandler:
 
         # Данные для отправки сообщения
         text = 'Отправьте оценку'
-        reply_markup = RateFilmMenu.create_ratings_kb
+        reply_markup = RateFilmMenu.create_ratings_menu_kb
         message_data = {'text': text, 'reply_markup': reply_markup}
 
         # Получаем словарь с данными текущего состояния
@@ -228,7 +228,7 @@ class MyFilmsCommandHandler:
     async def process_my_films_command(message: Message, state: FSMContext):
         await message.answer(
             text='Выберите категорию',
-            reply_markup=MyFilmsMenu.create_my_films_kb()
+            reply_markup=MyFilmsMenu.create_my_films_menu_kb()
         )
         await state.set_state(FSMMyFilmsMenu.my_films)
 
@@ -242,7 +242,7 @@ class MyFilmsCommandHandler:
         if films:
             await callback.message.edit_text(
                 text='Список ваших фильмов',
-                reply_markup=MyFilmsMenu.create_all_my_films_kb(films)
+                reply_markup=MyFilmsMenu.create_all_my_films_menu_kb(films)
             )
             await callback.answer()
         else:
@@ -256,7 +256,7 @@ class MyFilmsCommandHandler:
         title = FilmORM.get_film(film_id).title
         await callback.message.edit_text(
             text=title,
-            reply_markup=MyFilmsMenu.create_film_info_kb()
+            reply_markup=MyFilmsMenu.create_film_info_menu_kb()
         )
         await callback.answer()
 
