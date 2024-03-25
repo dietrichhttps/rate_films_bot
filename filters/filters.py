@@ -10,4 +10,3 @@ class IsRating(BaseFilter):
             rating = callback.data.split('rating-')[1].strip()
             return re.match(r'^(?:[0-9]|10)$', rating) and rating.isdigit()
         return False
-    
