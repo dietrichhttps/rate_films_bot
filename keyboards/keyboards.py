@@ -6,20 +6,13 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 class Buttons:
     @staticmethod
     # Функция, создающая кнопки навигации
-    def create_navigation_buttons(
-            with_main_menu: bool = False) -> list[InlineKeyboardButton]:
-        if not with_main_menu:
-            navigation_buttons = [
-                InlineKeyboardButton(text='Назад', callback_data='return'),
-                InlineKeyboardButton(text='Отмена', callback_data='cancel')
-            ]
-        else:
-            navigation_buttons = [
-                InlineKeyboardButton(text='Назад', callback_data='return'),
-                InlineKeyboardButton(text='Главное меню',
-                                     callback_data='main_menu'),
-                InlineKeyboardButton(text='Отмена', callback_data='cancel')
-            ]
+    def create_navigation_buttons() -> list[InlineKeyboardButton]:
+        navigation_buttons = [
+            InlineKeyboardButton(text='Назад', callback_data='return'),
+            InlineKeyboardButton(text='Отмена', callback_data='cancel'),
+            InlineKeyboardButton(text='Главное меню',
+                                 callback_data='main_menu')
+        ]
         return navigation_buttons
 
 
