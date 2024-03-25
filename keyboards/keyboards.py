@@ -2,8 +2,10 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 
+# Класс для работы с кнопками
 class Buttons:
     @staticmethod
+    # Функция, создающая кнопки навигации
     def create_navigation_buttons(
             with_main_menu: bool = False) -> list[InlineKeyboardButton]:
         if not with_main_menu:
@@ -21,7 +23,9 @@ class Buttons:
         return navigation_buttons
 
 
+# Класс, внутри которого генераторы клавиатур и кнопок
 class Generator:
+    # Генератор кнопок
     @staticmethod
     def create_button(text: str,
                       callback_data: str,
@@ -31,6 +35,7 @@ class Generator:
         else:
             return InlineKeyboardButton(text=text, callback_data=callback_data)
 
+    # Генератор клавиатур
     @staticmethod
     def create_keyboard(buttons: list[list[InlineKeyboardButton]],
                         row_width: int = 1) -> InlineKeyboardMarkup:
@@ -40,7 +45,9 @@ class Generator:
         return kb_builder.as_markup()
 
 
+# Класс, внутри которого клавиатуры для главного меню
 class MainMenu:
+    # Функция, создающая клавиатуру главного меню
     @staticmethod
     def create_main_menu_kb() -> InlineKeyboardMarkup:
         buttons = [
@@ -52,7 +59,9 @@ class MainMenu:
         return Generator.create_keyboard(buttons, row_width=2)
 
 
+# Класс, внутри которого клавиатуры для меню с оценкой фильма
 class RateFilmMenu:
+    # Функция, создающая клавиатуру для меню с оценкой фильма
     @staticmethod
     def create_rate_film_menu_kb() -> InlineKeyboardMarkup:
         buttons = [
@@ -60,8 +69,10 @@ class RateFilmMenu:
         ]
         return Generator.create_keyboard(buttons, row_width=2)
 
+    # Функция, создающая клавиатуру для предложений из Википедии
     @staticmethod
-    def create_suggestions_kb(suggestions_data: dict) -> InlineKeyboardMarkup:
+    def create_suggestions_menu_kb(
+            suggestions_data: dict) -> InlineKeyboardMarkup:
         title = suggestions_data['current_query_title']
         buttons: list[list[InlineKeyboardButton]] = []
         for title, link in suggestions_data[title].items():
@@ -75,8 +86,9 @@ class RateFilmMenu:
 
         return Generator.create_keyboard(buttons, 2)
 
+    # Функция, создающая клавиатуру с оценками
     @staticmethod
-    def create_ratings_kb() -> InlineKeyboardMarkup:
+    def create_ratings_menu_kb() -> InlineKeyboardMarkup:
         buttons = [[Generator.create_button(
             str(rating),
             f'rating-{rating}') for rating in reversed(range(11))],
@@ -85,9 +97,11 @@ class RateFilmMenu:
         return Generator.create_keyboard(buttons, 2)
 
 
+# Класс, внутри которого клавиатуры для меню со всеми фильмами
 class MyFilmsMenu:
+    # Функция, создающая клавиатуру для меню с моими фильмами
     @staticmethod
-    def create_my_films_kb() -> InlineKeyboardMarkup:
+    def create_my_films_menu_kb() -> InlineKeyboardMarkup:
         buttons = [
             [Generator.create_button('Все фильмы', 'all_films'),
              Generator.create_button('Фильмы по оценкам', 'films_by_rating')],
@@ -96,8 +110,9 @@ class MyFilmsMenu:
         ]
         return Generator.create_keyboard(buttons, 2)
 
+    # Функция, создающая клавиатуру для меню со всеми фильмами
     @staticmethod
-    def create_all_my_films_kb(
+    def create_all_my_films_menu_kb(
             films: dict[int, str]) -> InlineKeyboardMarkup:
         buttons = [
             [Generator.create_button(
@@ -109,8 +124,9 @@ class MyFilmsMenu:
 
         return Generator.create_keyboard(buttons, 2)
 
+    # Функция, создающая клавиатуру для меню с информацией о фильме
     @staticmethod
-    def create_film_info_kb() -> InlineKeyboardMarkup:
+    def create_film_info_menu_kb() -> InlineKeyboardMarkup:
         buttons = [
             [Generator.create_button('Оценка', 'my_film_rating'),
              Generator.create_button('Рецензия', 'my_film_review')],
