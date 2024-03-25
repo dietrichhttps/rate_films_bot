@@ -22,20 +22,29 @@ state_list = StateLinkedList()
 
 # Класс, содержащий обработчики для команды /start
 class StartCommandHandler:
-    # Этот хэндлер будет срабатывать на команду "/start" -
-    # добавлять пользователя в базу данных, если его там еще не было
-    # и отправлять ему приветственное сообщение
+    # Этот хэндлер будет срабатывать на команду "/start",
+    # отправлять ему приветственное сообщение и
+    # отаправлять ему клавиатуру для входа в главное меню
     @router.message(CommandStart(), StateFilter(default_state))
     async def process_start_command(message: Message, state: FSMContext):
+        # Определяем текущее состояние
         current_state = FSMStartMenu.start_menu
+        # Добавляем текущее состояние в список состояний
         state_list.add_state(current_state)
+        # Подготавливаем данные для формирования ответа
         text = LEXICON[message.text]
         reply_markup = StartMenu.create_start_menu_kb
+        # Добавляем данные в словарь с данными для ответа
         message_data = (text, reply_markup)
+        # Добавляем словарь с данными для ответа в словарь с
+        # данными текущего состояния
         state_data = {'message_data': message_data}
+        # Добавляем словарь с данными текущего состония в хранилище
         await state.update_data(start_menu=state_data)
+        # Устанавливаем текущее состояние
         await state.set_state(FSMStartMenu.start_menu)
 
+        # Отправляем ответ пользователю
         await message.answer(
             text=text,
             reply_markup=reply_markup())
