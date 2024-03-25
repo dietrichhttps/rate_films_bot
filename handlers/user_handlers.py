@@ -329,3 +329,23 @@ class NavigationCommandHandler:
 
         # Возвращаем пользователя в состояние стартового меню
         await state.set_state(FSMStartMenu.start_menu)
+
+    # Этот хэндлер будет срабатывать при нажатии кнопки "Отмена"
+    @router.callback_query(F.data == 'main_menu',
+                           ~StateFilter(default_state, FSMMainMenu))
+    async def process_main_menu_press(callback: CallbackQuery,
+                                      state: FSMContext):
+        # Получаем словарь из MemoryStorage()
+        storage_data = await state.get_data()
+        # Получаем данные для отправки ответа
+        message_data = storage_data['main_menu']['message_data']
+        text, reply_markup = message_data.values()
+
+        # Отправляем ответ из главного меню
+        await callback.message.edit_text(
+            text=text,
+            reply_markup=reply_markup()
+        )
+
+        # Возвращаем пользователя в состояние главного меню
+        await state.set_state(FSMMainMenu.main_menu)
