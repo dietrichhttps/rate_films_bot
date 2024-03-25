@@ -4,6 +4,10 @@ from aiogram.fsm.storage.memory import MemoryStorage
 storage = MemoryStorage()
 
 
+class FSMStartMenu(StatesGroup):
+    start_menu = State()
+
+
 # Группа состояний для команды /main_menu
 class FSMMainMenu(StatesGroup):
     main_menu = State()
