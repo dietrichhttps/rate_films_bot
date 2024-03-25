@@ -4,41 +4,19 @@ from aiogram import Router, F
 from aiogram.filters import Command, CommandStart, StateFilter
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import default_state, State, StatesGroup
-from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.fsm.state import default_state
 
 from lexicon.lexicon import LEXICON
 from filters.filters import IsRating
 from services.film_service import search_films
-from keyboards.films_kb import (create_suggestions_keyboard,
-                                create_film_info_keyboard,
-                                create_my_films_keyboard,
-                                create_all_my_films_keyboard)
-from keyboards.ratings_kb import create_ratings_keyboard
-
+from keyboards.keyboards import MainMenu, RateFilmMenu, MyFilmsMenu
 from database.orm import FilmORM, RatingORM
+from states.states import (FSMMainMenu, FSMRateFilmMenu, FSMMyFilmsMenu)
+from states.state_management import StateLinkedList
 
 router = Router()
-storage = MemoryStorage()
 logger = logging.getLogger(__name__)
-
-
-# Группа состояний для команды /rate_film
-class FSMRateFilm(StatesGroup):
-    send_title = State()
-    send_rating = State()
-
-
-# Группа состояний для команды /review_film
-class FSMReviewFilm(StatesGroup):
-    send_title = State()
-    send_review = State()
-
-
-# Группа состояний для команды /my_films
-class FSMMyFilms(StatesGroup):
-    my_films = State()
-    my_ratings = State()
+state_list = StateLinkedList()
 
 
 # Класс, содержащий обработчики для команды /start
@@ -51,91 +29,211 @@ class StartCommandHandler:
         await message.answer(LEXICON[message.text])
 
 
-# Класс, содержащий обработчики для команды /rate_film
+# Класс, содержащий обработчик команды /main_menu
+class MainMenuCommandHandler:
+    # Этот хэндлер будет срабатывать на команду /main_menu
+    @router.message(Command(commands='main_menu'), StateFilter(default_state))
+    async def process_main_menu_command(message: Message, state: FSMContext):
+        # Текст над клавиатурой
+        text = 'Главное меню'
+        # Ссылка на клавиатуру
+        reply_markup = MainMenu.create_main_menu_kb
+        # Данные для формирования ответа пользователю
+        message_data = {'text': text, 'reply_markup': reply_markup}
+
+        # Данные текущего состояния
+        state_data = {'message_data': message_data}
+
+        # Текущее состояние
+        current_state = FSMMainMenu.main_menu
+        # Добавляем в односвязный список состояний текущее состояние
+        state_list.add_state(current_state)
+        # Добавляем в хранилище данные текущего состония
+        await state.update_data(main_menu=state_data)
+        # Устанавливаем текущее состояние
+        await state.set_state(current_state)
+
+        # Отправляем ответ пользователюи
+        await message.answer(
+            text=text,
+            reply_markup=reply_markup()
+        )
+
+
+# Класс, содержащий обработчики для кнопки "Оценить фильм"
 class RateFilmCommandHandler:
-    # Этот хэндлер будет срабатывать на команду /rate_film
-    @router.message(Command(commands='rate_film'), StateFilter(default_state))
-    async def process_rate_film_command(message: Message, state: FSMContext):
-        await message.answer('Пришлите название фильма для оценки')
-        await state.set_state(FSMRateFilm.send_title)
+    # Этот хэндлер будет срабатывать на кнопку "Оценить фильм"
+    @router.callback_query(F.data == 'rate_film',
+                           StateFilter(FSMMainMenu.main_menu))
+    async def process_rate_film_press(callback: CallbackQuery,
+                                      state: FSMContext):
+        # Текст над клавиатурой
+        text = 'Пришлите название фильма для оценки'
+        # Ссылка на клавиатуру
+        reply_markup = RateFilmMenu.create_rate_film_menu_kb
+        # Данные для формирования ответа пользователю
+        message_data = {'text': text, 'reply_markup': reply_markup}
+
+        # Данные текущего состояния
+        state_data = {'message_data': message_data}
+
+        # Текущее состояние
+        current_state = FSMRateFilmMenu.send_title
+        # Добавляем в односвязный список состояний текущее состояние
+        state_list.add_state(current_state)
+        # Добавляем в хранилище данные текущего состония
+        await state.update_data(send_title=state_data)
+        # Устанавливаем текущее состояние
+        await state.set_state(current_state)
+
+        # Отправляем ответ пользователюи
+        await callback.message.edit_text(
+            text=text,
+            reply_markup=reply_markup()
+        )
+        await callback.answer()
 
     # Этот хэндлер будет срабатывать на текст с названием фильма
     # после команды /rate_film
-    @router.message(StateFilter(FSMRateFilm.send_title))
+    @router.message(StateFilter(FSMRateFilmMenu.send_title))
     async def process_film_title_sent(message: Message, state: FSMContext):
+        # Название поискового запроса
         query_title = message.text
-        suggestions = search_films(query_title)
+        # Данные из хранилища
+        storage_data = await state.get_data()
+        # Данные из текущего состония
+        select_suggestion_data = storage_data.get('select_suggestion', {})
+        # Кэшированные данные текущего состояния
+        cached_data = select_suggestion_data.get(
+            'message_data', {}).get(
+                'cached_data', {})
+        # Текст над клавиатурой
+        text = 'Выберите фильм'
+        # Ссылка на клавиатуру
+        reply_markup = RateFilmMenu.create_suggestions_kb
+        # Данные для формирования ответа пользователю
+        message_data = {'text': text, 'reply_markup': reply_markup}
 
-        if suggestions:
-            await state.update_data(suggestions=suggestions)
-            await message.answer(
-                text='Выберите фильм',
-                reply_markup=create_suggestions_keyboard(suggestions)
-            )
+        # Проверяем есть ли строка с поисковым запросом в
+        # в ключах словаря с кэшированными данными текущего состояния
+        if query_title in cached_data.keys():
+            # Добавляем текущий поисковый запрос в кэшированные данные,
+            # чтобы в дальнейшем доставать по нему кэшированные
+            # предложения из Википедии
+            cached_data['current_query_title'] = query_title
         else:
-            await message.answer(
-                text='К сожалению, по вашему запросу ничего найдено')
+            # Получаем результаты поиска в Википедии
+            suggestions = search_films(query_title)
+            # Добавляем связку "поисковый запрос - предложения из Википедии"
+            cached_data.setdefault(query_title, suggestions)
+            # Добавляем текущий поисковый запрос в кэшированные данные,
+            # чтобы в дальнейшем доставать по нему кэшированные
+            # предложения из Википедии
+            cached_data['current_query_title'] = query_title
+            # Добавляем в словарь с данными для
+            # формирования ответа кэшированные данные
+            message_data.setdefault('cached_data', cached_data)
+            # Добавляем в словарь с данными текущего состояния данные для
+            # отправки сообщения
+            state_data = {'message_data': message_data}
+            # Добавляем в хранилизе данные текущего состояния
+            await state.update_data(select_suggestion=state_data)
 
-    # Этот хэндлер будет срабатаывать при нажатие
+        # Определяем текущее состояние
+        current_state = FSMRateFilmMenu.select_suggestion
+        # Добавляем в односвязный список состояний текущее состояние
+        state_list.add_state(current_state)
+        # Устанавливаем текущее состояние
+        await state.set_state(current_state)
+
+        # Отправляем ответ пользователю
+        await message.answer(
+            text=text,
+            reply_markup=reply_markup(cached_data)
+        )
+
+    # Этот хэндлер будет срабатаывать при нажатии
     # на кнопку с предложенным фильмом
-    @router.callback_query(StateFilter(FSMRateFilm.send_title),
+    @router.callback_query(StateFilter(FSMRateFilmMenu.select_suggestion),
                            F.data.startswith('suggestion-'))
     async def process_suggestion_press(callback: CallbackQuery,
                                        state: FSMContext):
-        title = callback.data.split('suggestion-')[1]
-        temp_data = await state.get_data()
-        wiki_link = temp_data['suggestions'][title]
-        await state.update_data(title=title, wiki_link=wiki_link,
-                                suggestions=None)
+        # Данные фильма
+        selected_title = callback.data.split('suggestion-')[1]
+        storage_data = await state.get_data()
+        cached_data = (storage_data['select_suggestion']
+                       ['message_data']['cached_data'])
+        current_query_title = cached_data['current_query_title']
+        wiki_link = cached_data[current_query_title][selected_title]
+        film_data = {'title': selected_title, 'wiki_link': wiki_link}
+
+        # Данные для отправки сообщения
+        text = 'Отправьте оценку'
+        reply_markup = RateFilmMenu.create_ratings_kb
+        message_data = {'text': text, 'reply_markup': reply_markup}
+
+        # Получаем словарь с данными текущего состояния
+        state_data = {'message_data': message_data, 'film_data': film_data}
+
+        # Определяем текущее состояние
+        current_state = FSMRateFilmMenu.send_rating
+        # Добавляем текущее состояние в список состояний
+        state_list.add_state(current_state)
+        # Добавляем данные текущего состояния в хранилище
+        await state.update_data(send_rating=state_data)
+        # Устанавливаем текущее состояние
+        await state.set_state(current_state)
 
         await callback.message.edit_text(
-            text='Отправьте оценку',
-            reply_markup=create_ratings_keyboard()
+            text=text,
+            reply_markup=reply_markup()
         )
         await callback.answer()
-        await state.set_state(FSMRateFilm.send_rating)
 
     # Этот хэндлер будет срабатывать на нажатую кнопку с оценкой фильма
-    @router.callback_query(StateFilter(FSMRateFilm.send_rating), IsRating())
+    @router.callback_query(StateFilter(FSMRateFilmMenu.send_rating),
+                           IsRating())
     async def process_film_rating_sent(callback: CallbackQuery,
                                        state: FSMContext):
         rating = int(callback.data.split('rating-')[1])
-        await state.update_data(rating=rating)
 
-        await callback.answer('Оценка принята!')
-        await callback.answer()
+        # Получаем данные для отправки в базу данных
+        storage_data = await state.get_data()
+        film_data = storage_data['send_rating']['film_data']
+        title, wiki_link = film_data.values()
 
-        film_data = await state.get_data()
-        film_data.pop('suggestions', None)
-        title, wiki_link, rating = film_data.values()
-
+        # Отправляем название фильма, ссылку и оценку
+        # в базу данных
         FilmORM.set_film(title, wiki_link)
         film_id = FilmORM.get_film_id(wiki_link)
         RatingORM.set_rating(film_id, rating)
-        await state.clear()
 
-    # Этот хэндлер будет срабатывать, если во время отправки
-    # оценки будет введенено что-то не то
-    @router.callback_query(StateFilter(FSMRateFilm.send_rating))
-    async def warning_not_rating(callbback: CallbackQuery):
-        await callbback.answer(
-            text='Оценка должна быть по 10 балльной шкале\n\n'
-                 'Попробуйте еще раз!')
+        # Определяем текущее состояние
+        current_state = FSMRateFilmMenu.rate_complete
+        # Добавляем текущее состояние в список состояний
+        state_list.add_state(current_state)
+        # Устанавливаем текущее состояние
+        await state.set_state(current_state)
+
+        # Отправляем ответ пользователю
+        await callback.answer('Оценка принята!')
+        await callback.answer()
 
 
 # Класс, содержащий обработчики для команды /my_films
 class MyFilmsCommandHandler:
     # Этот хэндлер будет срабатывать на команду /my_films
-    @router.message(Command(commands='my_films'), StateFilter(default_state))
+    @router.message(Command(commands='my_films'),
+                    StateFilter(FSMMainMenu.main_menu))
     async def process_my_films_command(message: Message, state: FSMContext):
-        await state.set_state(FSMMyFilms.my_films)
         await message.answer(
             text='Выберите категорию',
-            reply_markup=create_my_films_keyboard()
+            reply_markup=MyFilmsMenu.create_my_films_kb()
         )
+        await state.set_state(FSMMyFilmsMenu.my_films)
 
     # Этот хэндлер будет срабатывать при нажатии на кнопку "Все фильмы"
-    @router.callback_query(StateFilter(FSMMyFilms.my_films),
+    @router.callback_query(StateFilter(FSMMyFilmsMenu.my_films),
                            F.data == 'all_films')
     async def process_all_films_press(callback: CallbackQuery,
                                       state: FSMContext):
@@ -144,27 +242,49 @@ class MyFilmsCommandHandler:
         if films:
             await callback.message.edit_text(
                 text='Список ваших фильмов',
-                reply_markup=create_all_my_films_keyboard(films)
+                reply_markup=MyFilmsMenu.create_all_my_films_kb(films)
             )
             await callback.answer()
         else:
             await callback.answer('У вас пока нет фильмов')
 
     # Этот хэндлер будет срабатывать на нажатие фильма в категории "Все фильмы"
-    @router.callback_query(StateFilter(FSMMyFilms.my_films),
+    @router.callback_query(StateFilter(FSMMyFilmsMenu.my_films),
                            F.data.startswith('my_film-'))
     async def process_my_film_press(callback: CallbackQuery):
         film_id = int(callback.data.split('my_film-')[1])
         title = FilmORM.get_film(film_id).title
         await callback.message.edit_text(
             text=title,
-            reply_markup=create_film_info_keyboard()
+            reply_markup=MyFilmsMenu.create_film_info_kb()
         )
-        await callback.asnwer()
+        await callback.answer()
 
-    # Этот хэндлер будет срабатывать на нажатие кнопки "Оценка" в категории
-    # create_film_info_keyboard
-    @router.callback_query(StateFilter(FSMMyFilms.my_films),
-                           F.data == 'my_film_rating')
-    async def process_my_films_rating_press(callback: CallbackQuery):
-        pass
+
+# Класс, содержащий обработчики кнопок навигации
+class NavigationCommandHandler:
+    # Этот хэндлер будет срабатывать при нажатии кнопки "Назад"
+    @router.callback_query(F.data == 'return', StateFilter(FSMRateFilmMenu))
+    async def process_return_press(callback: CallbackQuery, state: FSMContext):
+        # Получаем словарь из MemoryStorage()
+        storage_data = await state.get_data()
+        # Получаем предыдущее состояние пользователя
+        state_list.go_back()
+        prev_state = state_list.get_current_state_str()
+        # Получаем данные для отправки сообщения
+        message_data = list(
+            storage_data.get(
+                prev_state.split(':')[1]).get('message_data').values())
+        text, reply_markup_ref = message_data[:2]
+        reply_markup_arg = message_data[-1] if len(message_data) > 2 else None
+        reply_markup_to_use = (reply_markup_ref(reply_markup_arg)
+                               if reply_markup_arg else reply_markup_ref())
+
+        # Отправляем клавиатуру из прошлого состояния
+        await callback.message.edit_text(
+            text=text,
+            reply_markup=reply_markup_to_use
+        )
+
+        # Возвращаем пользователя в предыдущее состояние
+        await state.set_state(prev_state)
