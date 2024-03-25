@@ -330,7 +330,7 @@ class NavigationCommandHandler:
         # Возвращаем пользователя в состояние стартового меню
         await state.set_state(FSMStartMenu.start_menu)
 
-    # Этот хэндлер будет срабатывать при нажатии кнопки "Отмена"
+    # Этот хэндлер будет срабатывать при нажатии кнопки "Главное меню"
     @router.callback_query(F.data == 'main_menu',
                            ~StateFilter(default_state, FSMMainMenu))
     async def process_main_menu_press(callback: CallbackQuery,
