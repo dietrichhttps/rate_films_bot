@@ -38,6 +38,20 @@ class Generator:
         return kb_builder.as_markup()
 
 
+# Класс, внутри которого клавиатура для стартового меню
+class StartMenu:
+    # Функция, создающая клавиатуру стартового меню
+    @staticmethod
+    def create_start_menu_kb():
+        start_btn = [
+            [Generator.create_button(
+                text='Start',
+                callback_data='main_menu'
+            )]
+        ]
+        return Generator.create_keyboard(start_btn)
+
+
 # Класс, внутри которого клавиатуры для главного меню
 class MainMenu:
     # Функция, создающая клавиатуру главного меню
