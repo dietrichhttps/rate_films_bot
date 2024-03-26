@@ -12,6 +12,7 @@ class TableORM:
         sync_engine.echo = False
 
 
+# Класс для работы с таблицей 'users'
 class UserORM:
     @staticmethod
     def get_user_id(tg_id: int) -> int | None:
@@ -57,21 +58,6 @@ class FilmORM:
 
 # Класс для работы с таблицей 'ratings'
 class RatingORM:
-    @staticmethod
-    def get_rating_obj(user_id: int, film_id: int) -> Rating | None:
-        with session_factory() as session:
-            rating = session.query(Rating).filter_by(user_id=user_id,
-                                                     film_id=film_id).first()
-            return rating
-
-    @staticmethod
-    def get_rating(user_id: int, film_id: int) -> Rating | None:
-        with session_factory() as session:
-            rating_obj = session.query(Rating).filter_by(
-                user_id=user_id,
-                film_id=film_id).first()
-            return rating_obj.rating if rating_obj else None
-
     @staticmethod
     def set_or_update_rating(user_id: int,
                              film_id: int, new_rating: int) -> None:
