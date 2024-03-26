@@ -6,7 +6,8 @@ import sys
 from aiogram import Bot, Dispatcher
 from config_data.config import load_config, Config
 from handlers import other_handlers, user_handlers  # , admin_handlers
-# from database.orm import TableORM
+from keyboards.keyboards import set_default_main_menu
+from database.orm import TableORM
 
 sys.path.insert(1, os.path.join(sys.path[0], '..'))
 
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__)
 # Функция конфигурирования и запуска бота
 async def main():
     # Создаем таблицы
-    # TableORM.create_tables()
+    TableORM.create_tables()
 
     # Конфигурируем логгирование
     logging.basicConfig(
@@ -38,6 +39,9 @@ async def main():
         token=config.tg_bot.token,
         parse_mode='HTML')
     dp = Dispatcher()
+
+    # Настраиваем дефолтное главное меню бота
+    await set_default_main_menu(bot)
 
     # Регистрируем роутеры в диспетчере
     dp.include_router(user_handlers.router)
