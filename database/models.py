@@ -1,14 +1,14 @@
-from sqlalchemy import Column, Integer, ForeignKey, Table, Text
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, String, ForeignKey, Text
 
 from database.database import Base
 
-# Создаем таблицу для связи между фильмами и оценками
-film_rating_association = Table(
-    'film_rating_association', Base.metadata,
-    Column('film_id', Integer, ForeignKey('films.id')),
-    Column('rating_id', Integer, ForeignKey('ratings.id')),
-)
+
+class User(Base):
+    __tablename__ = 'users'
+
+    id = Column(Integer, primary_key=True)
+    tg_id = Column(Integer, unique=True)
+    user_name = Column(String)
 
 
 class Film(Base):
@@ -18,17 +18,20 @@ class Film(Base):
     title = Column(Text)
     wiki_link = Column(Text)
 
-    # Определяем отношение "много ко многим" к оценкам
-    ratings = relationship('Rate', secondary=film_rating_association,
-                           back_populates='films')
 
-
-class Rate(Base):
+class Rating(Base):
     __tablename__ = 'ratings'
 
     id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'))
+    film_id = Column(Integer, ForeignKey('films.id'))
     rating = Column(Integer)
 
-    # Определяем отношение "много ко многим" к книгам
-    films = relationship('Film', secondary=film_rating_association,
-                         back_populates='ratings')
+
+class Review(Base):
+    __tablename__ = 'reviews'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'))
+    film_id = Column(Integer, ForeignKey('films.id'))
+    review = Column(Text)
