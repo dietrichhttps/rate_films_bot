@@ -6,16 +6,17 @@ storage = MemoryStorage()
 help_state = State()
 
 
+# Группа состояний для стартового меню
 class FSMStartMenu(StatesGroup):
     start_menu = State()
 
 
-# Группа состояний для команды /main_menu
+# Группа состояний для главного меню
 class FSMMainMenu(StatesGroup):
     main_menu = State()
 
 
-# Группа состояний для команды /rate_film
+# Группа состояний для команды для меню оценки
 class FSMRateFilmMenu(StatesGroup):
     send_title = State()
     select_suggestion = State()
@@ -23,7 +24,7 @@ class FSMRateFilmMenu(StatesGroup):
     rate_submit = State()
 
 
-# Группа состояний для команды /review_film
+# Группа состояний для меню рецензии
 class FSMReviewFilmMenu(StatesGroup):
     send_title = State()
     select_suggestion = State()
@@ -31,7 +32,7 @@ class FSMReviewFilmMenu(StatesGroup):
     submit_or_edit_review = State()
 
 
-# Группа состояний для команды /my_films
+# Группа состояний для меню моих фильмов
 class FSMMyFilmsMenu(StatesGroup):
     my_films = State()
     my_ratings = State()
