@@ -15,4 +15,6 @@ logger = logging.getLogger(__name__)
 @router.message(StateFilter(default_state))
 async def send_echo(message: Message):
     logger.debug('Inside send_echo')
-    await message.reply(text='Извините, моя твоя не понимать')
+    await message.reply(
+        text='Пожалуйста, отправьте команду\n'
+             '/start для корректной работы бота')
