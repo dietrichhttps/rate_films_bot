@@ -30,3 +30,11 @@ class StateLinkedList:
         if current_state:
             current_state_str = str(current_state)[8:-2]
             return current_state_str
+
+    def get_state_list(self) -> list:
+        state_list = []
+        current_node = self.head
+        while current_node:
+            state_list.append(current_node.state)
+            current_node = current_node.prev_node
+        return state_list
