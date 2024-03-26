@@ -1,5 +1,9 @@
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram import Bot
+from aiogram.types import (InlineKeyboardButton,
+                           InlineKeyboardMarkup, BotCommand)
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+
+from lexicon.lexicon import LEXICON_COMMANDS
 
 
 # Класс для работы с кнопками
@@ -66,16 +70,9 @@ class MainMenu:
         return Generator.create_keyboard(buttons, row_width=2)
 
 
-# Класс, внутри которого клавиатуры для меню с оценкой фильма
-class RateFilmMenu:
-    # Функция, создающая клавиатуру для меню с оценкой фильма
-    @staticmethod
-    def create_rate_film_menu_kb() -> InlineKeyboardMarkup:
-        buttons = [
-            Buttons.create_navigation_buttons()
-        ]
-        return Generator.create_keyboard(buttons, row_width=2)
-
+# Класс, внутри которого клавиатуры
+# для меню "Оценить фильм" и "Написать рецензию"
+class RateReviewFilmMenu:
     # Функция, создающая клавиатуру для предложений из Википедии
     @staticmethod
     def create_suggestions_menu_kb(
@@ -96,11 +93,30 @@ class RateFilmMenu:
     # Функция, создающая клавиатуру с оценками
     @staticmethod
     def create_ratings_menu_kb() -> InlineKeyboardMarkup:
+        submit_btn = Generator.create_button(
+            text='Подтвердить', callback_data='submit_rate'
+        )
         buttons = [[Generator.create_button(
             str(rating),
             f'rating-{rating}') for rating in reversed(range(11))],
+            [submit_btn],
             Buttons.create_navigation_buttons()
             ]
+        return Generator.create_keyboard(buttons, 2)
+
+    # Функция, создающая клавиатуру с рецензией
+    @staticmethod
+    def create_review_menu_kb() -> InlineKeyboardMarkup:
+        edit_btn = Generator.create_button(
+            text='Изменить', callback_data='edit_review'
+        )
+        submit_btn = Generator.create_button(
+            text='Подтвердить', callback_data='submit_review'
+        )
+        buttons = [
+            [edit_btn, submit_btn],
+            Buttons.create_navigation_buttons()
+        ]
         return Generator.create_keyboard(buttons, 2)
 
 
@@ -142,3 +158,23 @@ class MyFilmsMenu:
             Buttons.create_navigation_buttons()
         ]
         return Generator.create_keyboard(buttons, 2)
+
+
+# Класс, внутри которого клавиатуры навигации
+class Navigation:
+    # Функция, создающая клавиатуру для навигации
+    @staticmethod
+    def create_navigation_kb() -> InlineKeyboardMarkup:
+        buttons = [
+            Buttons.create_navigation_buttons()
+        ]
+        return Generator.create_keyboard(buttons, row_width=2)
+
+
+# Функция для настройки кнопки Menu бота
+async def set_default_main_menu(bot: Bot):
+    default_main_menu_commands = [BotCommand(
+        command=command,
+        description=description
+    ) for command, description in LEXICON_COMMANDS.items()]
+    await bot.set_my_commands(default_main_menu_commands)
