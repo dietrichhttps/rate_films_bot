@@ -164,14 +164,23 @@ class NavigationCommandHandler:
 
 # Класс, содержащий обработчики для
 # меню "Оценить фильм" и "Написать рецензию"
-class RateReviewFilmMenuHandler:
+class RatingReviewFilmMenuHandler:
     # Этот хэндлер будет срабатывать на кнопки "Оценить фильм"
     # и "Написать рецензию"
+    @router.message(Command(commands=['rate_film', 'review_film']),
+                    ~StateFilter(default_state))
     @router.callback_query(F.data.in_(['rate_film', 'review_film']),
                            StateFilter(FSMMainMenu.main_menu))
-    async def process_rate_review_film_press(callback: CallbackQuery,
-                                             state: FSMContext):
-        menu_name = callback.data
+    async def process_rate_review_film_press(
+            update: CallbackQuery | Message = None,
+            state: FSMContext = None):
+
+        # Определяем тип апдейта и получаем название меню
+        if isinstance(update, CallbackQuery):
+            menu_name = update.data
+        elif isinstance(update, Message):
+            menu_name = update.text[1:]
+        # Определяем текст для ответа в зависимости от названия меню
         text_words = {'rate': 'оценки', 'review': 'рецензии'}
         text_word = text_words.get(menu_name.split('_')[0])
         # Текст над клавиатурой
@@ -197,12 +206,19 @@ class RateReviewFilmMenuHandler:
         # Устанавливаем текущее состояние
         await state.set_state(current_state)
 
-        # Отправляем ответ пользователюи
-        await callback.message.edit_text(
-            text=text,
-            reply_markup=reply_markup()
-        )
-        await callback.answer()
+        if isinstance(update, CallbackQuery):
+            # Отправляем ответ пользователюи
+            await update.message.edit_text(
+                text=text,
+                reply_markup=reply_markup()
+            )
+            await update.answer()
+        elif isinstance(update, Message):
+            # Отправляем ответ пользователюи
+            await update.answer(
+                text=text,
+                reply_markup=reply_markup()
+            )
 
     # Этот хэндлер будет срабатывать на текст с названием фильма
     # после нажатия на кнопки "Оценить фильм" и "Написать рецензию"
