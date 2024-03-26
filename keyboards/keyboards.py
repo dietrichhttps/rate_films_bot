@@ -45,7 +45,7 @@ class StartMenu:
     def create_start_menu_kb():
         start_btn = [
             [Generator.create_button(
-                text='Start',
+                text='Старт',
                 callback_data='main_menu'
             )]
         ]
