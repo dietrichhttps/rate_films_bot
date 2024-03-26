@@ -122,20 +122,32 @@ class NavigationCommandHandler:
 
     # Этот хэндлер будет срабатывать при нажатии кнопки "Главное меню"
     # и при отправке команды /main_menu
-    @router.message(Command(commands='main_menu'), ~StateFilter(FSMMainMenu))
+    @router.message(Command(commands='main_menu'), ~StateFilter(default_state))
     @router.callback_query(F.data == 'main_menu',
                            ~StateFilter(default_state, FSMMainMenu))
     async def process_main_menu_press(update: Message | CallbackQuery = None,
                                       state: FSMContext = None):
+        # Текст над клавиатурой
+        text = 'Главное меню'
+        # Ссылка на клавиатуру
+        reply_markup = MainMenu.create_main_menu_kb
+        # Данные для формирования ответа пользователю
+        message_data = {'text': text, 'reply_markup': reply_markup}
+
+        # Данные текущего состояния
+        state_data = {'message_data': message_data}
+
         # Добавляем состояние главного меню в список состояний,
         # если его там нет
-        current_state = state_list.get_current_state()
-        states = state_list.get_state_list()
-        if current_state not in states:
-            state_list.add_state(current_state)
+        current_state = FSMMainMenu.main_menu
+        state_list.add_state(current_state)
+
+        # Добавляем в хранилище данные текущего состония
+        await state.update_data(main_menu=state_data)
+        # Устанавливаем текущее состояние
+        await state.set_state(current_state)
 
         update_type = type(update)
-
         if update_type == CallbackQuery:
             # Отправляем ответ из главного меню
             await update.message.edit_text(
@@ -148,42 +160,6 @@ class NavigationCommandHandler:
                 text='Главное меню',
                 reply_markup=MainMenu.create_main_menu_kb()
             )
-
-        # Возвращаем пользователя в состояние главного меню
-        await state.set_state(FSMMainMenu.main_menu)
-
-
-# Класс, содержащий обработчик команды /main_menu
-class MainMenuHandler:
-    # Этот хэндлер будет срабатывать на кнопку "Старт"
-    @router.callback_query(F.data == 'main_menu',
-                           StateFilter(FSMStartMenu.start_menu))
-    async def process_start_button_press(callback: CallbackQuery,
-                                         state: FSMContext):
-        # Текст над клавиатурой
-        text = 'Главное меню'
-        # Ссылка на клавиатуру
-        reply_markup = MainMenu.create_main_menu_kb
-        # Данные для формирования ответа пользователю
-        message_data = {'text': text, 'reply_markup': reply_markup}
-
-        # Данные текущего состояния
-        state_data = {'message_data': message_data}
-
-        # Текущее состояние
-        current_state = FSMMainMenu.main_menu
-        # Добавляем в односвязный список состояний текущее состояние
-        state_list.add_state(current_state)
-        # Добавляем в хранилище данные текущего состония
-        await state.update_data(main_menu=state_data)
-        # Устанавливаем текущее состояние
-        await state.set_state(current_state)
-
-        # Отправляем ответ пользователюи
-        await callback.message.edit_text(
-            text=text,
-            reply_markup=reply_markup()
-        )
 
 
 # Класс, содержащий обработчики для
