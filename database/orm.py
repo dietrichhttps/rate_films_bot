@@ -59,6 +59,12 @@ class FilmORM:
 # Класс для работы с таблицей 'ratings'
 class RatingORM:
     @staticmethod
+    def get_rating(film_id: int) -> int | None:
+        with session_factory() as session:
+            rating_obj = session.query(Rating).get(film_id)
+            return rating_obj.rating if rating_obj else None
+
+    @staticmethod
     def set_or_update_rating(user_id: int,
                              film_id: int, new_rating: int) -> None:
         with session_factory() as session:
@@ -79,11 +85,24 @@ class RatingORM:
 # Класс для работы с таблицей 'reviews'
 class ReviewORM:
     @staticmethod
-    def set_review(user_id: int, film_id: int, review: int) -> None:
+    def get_review(film_id: int) -> int | None:
         with session_factory() as session:
-            # Создаем объект рецензии
-            new_review = Review(user_id=user_id, film_id=film_id,
-                                review=review)
-            # Добавляем оценку и фиксируем изменения в базе данных
-            session.add(new_review)
+            review_obj = session.query(Review).get(film_id)
+            return review_obj.review if review_obj else None
+
+    @staticmethod
+    def set_review(user_id: int, film_id: int, new_review: int) -> None:
+        with session_factory() as session:
+            # Пытаемся получить объект рецензии пользователя для данного фильма
+            review_obj = session.query(Review).filter_by(
+                user_id=user_id,
+                film_id=film_id).first()
+            if review_obj:
+                # Если оценка уже существует, обновляем ее
+                review_obj.review = new_review
+            else:
+                # Если оценка не существует, создаем новую
+                new_rating_obj = Review(user_id=user_id, film_id=film_id,
+                                        review=new_review)
+                session.add(new_rating_obj)
             session.commit()
