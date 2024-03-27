@@ -42,6 +42,26 @@ class Generator:
         return kb_builder.as_markup()
 
 
+# Класс, внутри которого клавиатуры навигации
+class Navigation:
+    # Функция, создающая клавиатуру для навигации
+    @staticmethod
+    def create_navigation_kb() -> InlineKeyboardMarkup:
+        buttons = [
+            Buttons.create_navigation_buttons()
+        ]
+        return Generator.create_keyboard(buttons, row_width=2)
+
+
+# Функция для настройки кнопки Menu бота
+async def set_default_main_menu(bot: Bot):
+    default_main_menu_commands = [BotCommand(
+        command=command,
+        description=description
+    ) for command, description in LEXICON_COMMANDS.items()]
+    await bot.set_my_commands(default_main_menu_commands)
+
+
 # Класс, внутри которого клавиатура для стартового меню
 class StartMenu:
     # Функция, создающая клавиатуру стартового меню
@@ -81,7 +101,7 @@ class RateReviewFilmMenu:
         buttons: list[list[InlineKeyboardButton]] = []
         for title, link in suggestions_data[title].items():
             suggestion_button = Generator.create_button(
-                text=title, callback_data=f'suggestion-{title}')
+                text=title, callback_data=f'film_title-{title}')
             link_button = Generator.create_button(
                 text='Ссылка на фильм', url=link, callback_data=None)
             buttons.append([suggestion_button])
@@ -137,44 +157,50 @@ class MyFilmsMenu:
     @staticmethod
     def create_all_my_films_menu_kb(
             films: dict[int, str]) -> InlineKeyboardMarkup:
-        buttons = [
-            [Generator.create_button(
-                title,
-                f'my_film-{film_id}') for film_id, title in films.items()
-             ],
-            Buttons.create_navigation_buttons()
-        ]
+        # Инициализируем список для кнопок
+        buttons = []
 
+        # Создаем строку кнопок с фильмами
+        film_buttons_row = []
+        for film_id, title in films.items():
+            film_buttons_row.append(
+                Generator.create_button(title, f'my_film-{film_id}'))
+
+            # Если набралось одна кнопку в строку, добавляем эту
+            # строку в список кнопок и очищаем строку для следующей пары кнопок
+            if len(film_buttons_row) == 1:
+                buttons.append(film_buttons_row)
+                film_buttons_row = []
+
+        # Если в строке осталась одна кнопка, добавляем ее в список кнопок
+        if film_buttons_row:
+            buttons.append(film_buttons_row)
+
+        # Добавляем кнопки навигации в отдельную строку
+        buttons.append(Buttons.create_navigation_buttons())
+
+        # Создаем клавиатуру из списка кнопок
         return Generator.create_keyboard(buttons, 2)
 
     # Функция, создающая клавиатуру для меню с информацией о фильме
     @staticmethod
-    def create_film_info_menu_kb() -> InlineKeyboardMarkup:
+    def create_film_info_menu_kb(url: str) -> InlineKeyboardMarkup:
         buttons = [
             [Generator.create_button('Оценка', 'my_film_rating'),
              Generator.create_button('Рецензия', 'my_film_review')],
             [Generator.create_button('Страница в Википедии',
-                                     'my_film_wiki_link')],
+                                     url=url,
+                                     callback_data=None)],
             Buttons.create_navigation_buttons()
         ]
         return Generator.create_keyboard(buttons, 2)
 
-
-# Класс, внутри которого клавиатуры навигации
-class Navigation:
-    # Функция, создающая клавиатуру для навигации
+    # Функция, создающая клавитуру для меню с оценкой фильма
     @staticmethod
-    def create_navigation_kb() -> InlineKeyboardMarkup:
+    def create_rating_review_menu_kb(button_text: str,
+                                     button_data: str) -> InlineKeyboardMarkup:
         buttons = [
+            [Generator.create_button(button_text, button_data)],
             Buttons.create_navigation_buttons()
         ]
-        return Generator.create_keyboard(buttons, row_width=2)
-
-
-# Функция для настройки кнопки Menu бота
-async def set_default_main_menu(bot: Bot):
-    default_main_menu_commands = [BotCommand(
-        command=command,
-        description=description
-    ) for command, description in LEXICON_COMMANDS.items()]
-    await bot.set_my_commands(default_main_menu_commands)
+        return Generator.create_keyboard(buttons, 2)
