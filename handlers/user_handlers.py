@@ -26,13 +26,15 @@ class StartCommandHandler:
     # Этот хэндлер будет срабатывать на команду "/start",
     # отправлять приветственное сообщение и
     # отаправлять клавиатуру для входа в главное меню
-    @router.message(CommandStart(), StateFilter(default_state))
+    @router.message(CommandStart())
     async def process_start_command(message: Message, state: FSMContext):
         # Получаем данные о пользователе
         tg_id = int(message.from_user.id)
         user_name = message.from_user.full_name
         # Добавляем пользователя в БД
-        UserORM.set_user(tg_id, user_name)
+        # если его нет в БД
+        if not UserORM.get_user_id(tg_id):
+            UserORM.set_user(tg_id, user_name)
         # Определяем текущее состояние
         current_state = FSMStartMenu.start_menu
         # Добавляем текущее состояние в список состояний
@@ -168,6 +170,7 @@ class NavigationCommandHandler:
 class RatingReviewFilmMenuHandler:
     # Этот хэндлер будет срабатывать на кнопки "Оценить фильм"
     # и "Написать рецензию"
+    # и на команды /rate_film, /review_film
     @router.message(Command(commands=['rate_film', 'review_film']),
                     ~StateFilter(default_state))
     @router.callback_query(F.data.in_(['rate_film', 'review_film']),
@@ -475,31 +478,75 @@ class RatingReviewFilmMenuHandler:
         )
 
 
-# Класс, содержащий обработчики для команды /my_films
+# Класс, содержащий обработчики для
+# меню "Мои фильмы"
 class MyFilmsMenuHandler:
     # Этот хэндлер будет срабатывать на команду /my_films
+    # и кнопку "Мои фильмы"
     @router.message(Command(commands='my_films'),
-                    StateFilter(FSMMainMenu.main_menu))
-    async def process_my_films_command(message: Message, state: FSMContext):
-        await message.answer(
-            text='Выберите категорию',
-            reply_markup=MyFilmsMenu.create_my_films_menu_kb()
-        )
-        await state.set_state(FSMMyFilmsMenu.my_films)
+                    ~StateFilter(default_state))
+    @router.callback_query(F.data == 'my_films',
+                           StateFilter(FSMMainMenu.main_menu))
+    async def process_my_films_press(update: Message | CallbackQuery = None,
+                                     state: FSMContext = None):
+        # Формируем данные для текущего состояния для дальнейшего использования
+        # в обработчиках навигации
+        text = 'Мои фильмы'
+        reply_markup = MyFilmsMenu.create_my_films_menu_kb
+        message_data = {'text': text, 'reply_markup': reply_markup}
+        state_data = {'message_data': message_data}
+
+        # Текущее состояние
+        current_state = FSMMyFilmsMenu.my_films
+        # Добавляем в односвязный список состояний текущее состояние
+        state_list.add_state(current_state)
+        # Добавляем в хранилище данные текущего состония
+        await state.update_data(my_films=state_data)
+        # Устанавливаем текущее состояние
+        await state.set_state(current_state)
+
+        if isinstance(update, Message):
+            await update.answer(
+                text=text,
+                reply_markup=reply_markup())
+        elif isinstance(update, CallbackQuery):
+            await update.message.edit_text(
+                text=text,
+                reply_markup=reply_markup())
 
     # Этот хэндлер будет срабатывать при нажатии на кнопку "Все фильмы"
     @router.callback_query(StateFilter(FSMMyFilmsMenu.my_films),
                            F.data == 'all_films')
     async def process_all_films_press(callback: CallbackQuery,
                                       state: FSMContext):
+        # Получаем словарь с фильмами из БД
         films = FilmORM.get_all_films()
 
+        # Если в БД есть фильмы формириуем данные
+        # и отправляем ответ пользователю
         if films:
+            # Формируем данные для текущего
+            # состояния для дальнейшего использования
+            # в обработчиках навигации
+            text = 'Все фильмы'
+            reply_markup = MyFilmsMenu.create_all_my_films_menu_kb
+            message_data = {'text': text, 'reply_markup': reply_markup}
+            state_data = {'message_data': message_data}
+
+            # Текущее состояние
+            current_state = FSMMyFilmsMenu.all_films
+            # Добавляем в односвязный список состояний текущее состояние
+            state_list.add_state(current_state)
+            # Добавляем в хранилище данные текущего состония
+            await state.update_data(all_films=state_data)
+            # Устанавливаем текущее состояние
+            await state.set_state(current_state)
             await callback.message.edit_text(
-                text='Список ваших фильмов',
-                reply_markup=MyFilmsMenu.create_all_my_films_menu_kb(films)
+                text=text,
+                reply_markup=reply_markup(films)
             )
             await callback.answer()
+        # Если фильмов нет, сообщаем пользователю об этом
         else:
             await callback.answer('У вас пока нет фильмов')
 
