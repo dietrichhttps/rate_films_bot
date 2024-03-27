@@ -36,5 +36,8 @@ class FSMReviewFilmMenu(StatesGroup):
 class FSMMyFilmsMenu(StatesGroup):
     my_films = State()
     all_films = State()
+    my_film_info = State()
+    my_film_rating = State()
+    my_film_review = State()
     by_ratings = State()
     search_my_films = State()
