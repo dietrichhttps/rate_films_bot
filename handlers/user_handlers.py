@@ -24,8 +24,8 @@ state_list = StateLinkedList()
 # Класс, содержащий обработчики для команды /start
 class StartCommandHandler:
     # Этот хэндлер будет срабатывать на команду "/start",
-    # отправлять ему приветственное сообщение и
-    # отаправлять ему клавиатуру для входа в главное меню
+    # отправлять приветственное сообщение и
+    # отаправлять клавиатуру для входа в главное меню
     @router.message(CommandStart(), StateFilter(default_state))
     async def process_start_command(message: Message, state: FSMContext):
         # Получаем данные о пользователе
@@ -56,6 +56,7 @@ class StartCommandHandler:
             reply_markup=reply_markup())
 
 
+# Класс, содержащий обработчики команды /help
 class HelpCommandHandler:
     @router.message(Command(commands='help'),
                     ~StateFilter(help_state))
