@@ -299,13 +299,14 @@ class RatingReviewFilmMenuHandler:
     # Этот хэндлер будет срабатывать при нажатии
     # на кнопку с предложенным фильмом
     @router.callback_query(StateFilter(FSMRateFilmMenu.select_suggestion,
-                                       FSMReviewFilmMenu.select_suggestion,),
-                           F.data.startswith('suggestion-'))
+                                       FSMReviewFilmMenu.select_suggestion,
+                                       FSMMyFilmsMenu.my_film_rating),
+                           F.data.startswith('film_title-'))
     async def process_suggestion_press(callback: CallbackQuery,
                                        state: FSMContext):
         prev_state = state_list.get_current_state_str()
         # Данные фильма
-        selected_title = callback.data.split('suggestion-')[1]
+        selected_title = callback.data.split('film_title-')[1]
         storage_data = await state.get_data()
         cached_data = (storage_data['select_suggestion']
                        ['message_data']['cached_data'])
@@ -313,7 +314,8 @@ class RatingReviewFilmMenuHandler:
         wiki_link = cached_data[current_query_title][selected_title]
         film_data = {'title': selected_title, 'wiki_link': wiki_link}
 
-        if prev_state == 'FSMRateFilmMenu:select_suggestion':
+        if prev_state in ['FSMRateFilmMenu:select_suggestion',
+                          'FSMMyFilmsMenu:my_film_rating']:
             # Данные для отправки сообщения
             text = 'Отправьте оценку'
             reply_markup = RateReviewFilmMenu.create_ratings_menu_kb
@@ -422,7 +424,8 @@ class RatingReviewFilmMenuHandler:
     # меню рецензии
     @router.callback_query(F.data == 'edit_review',
                            StateFilter(
-                               FSMReviewFilmMenu.submit_or_edit_review))
+                               FSMReviewFilmMenu.submit_or_edit_review,
+                               FSMMyFilmsMenu.my_film_review))
     async def process_edit_review_press(callback: CallbackQuery,
                                         state: FSMContext):
         # Данные для отправки сообщения
@@ -454,9 +457,12 @@ class RatingReviewFilmMenuHandler:
         review_text = storage_data['submit_or_edit_review']['review_text']
 
         # Получаем данные для отправки в базу данных
-        storage_data = await state.get_data()
-        film_data = storage_data['send_review']['film_data']
-        title, wiki_link = film_data.values()
+        film_data = storage_data.get('send_review', {}).get('film_data', {})
+        # Если данных о фильме нет в состоянии 'send_review',
+        # ищем в состоянии 'my_film_info'
+        if not film_data:
+            film_data = storage_data['my_film_info']['film_data']
+        title, wiki_link = film_data['title'], film_data['wiki_link']
 
         # Отправляем название фильма, ссылку и рецензию
         # в базу данных
@@ -527,10 +533,11 @@ class MyFilmsMenuHandler:
         if films:
             # Формируем данные для текущего
             # состояния для дальнейшего использования
-            # в обработчиках навигации
+            # в других обработчиках
             text = 'Все фильмы'
             reply_markup = MyFilmsMenu.create_all_my_films_menu_kb
-            message_data = {'text': text, 'reply_markup': reply_markup}
+            message_data = {'text': text, 'reply_markup': reply_markup,
+                            'films': films}
             state_data = {'message_data': message_data}
 
             # Текущее состояние
@@ -550,14 +557,109 @@ class MyFilmsMenuHandler:
         else:
             await callback.answer('У вас пока нет фильмов')
 
-    # Этот хэндлер будет срабатывать на нажатие фильма в категории "Все фильмы"
-    @router.callback_query(StateFilter(FSMMyFilmsMenu.my_films),
-                           F.data.startswith('my_film-'))
-    async def process_my_film_press(callback: CallbackQuery):
+    # Этот хэндлер будет срабатывать при нажатии на кнопку с фильмом
+    # в меню "Все фильмы"
+    @router.callback_query(F.data.startswith('my_film-'),
+                           StateFilter(FSMMyFilmsMenu.all_films))
+    async def process_my_film_press(callback: CallbackQuery,
+                                    state: FSMContext):
+        # Получаем данные о фильме и записываем их в словарь
         film_id = int(callback.data.split('my_film-')[1])
-        title = FilmORM.get_film(film_id).title
+        film_obj = FilmORM.get_film(film_id)
+        film_rating = RatingORM.get_rating(film_id)
+        film_review = ReviewORM.get_review(film_id)
+        film_wiki_link = film_obj.wiki_link
+        film_data = {'title': film_obj.title, 'wiki_link': film_obj.wiki_link,
+                     'rating': film_rating, 'review': film_review}
+        # Формируем данные для текущего
+        # состояния и для дальнейшего использования
+        # в других обработчиках
+        text = film_obj.title
+        reply_markup = MyFilmsMenu.create_film_info_menu_kb
+        message_data = {'text': text, 'reply_markup': reply_markup,
+                        'film_wiki_link': film_wiki_link}
+        state_data = {'message_data': message_data, 'film_data': film_data}
+
+        # Текущее состояние
+        current_state = FSMMyFilmsMenu.my_film_info
+        # Добавляем в односвязный список состояний текущее состояние
+        state_list.add_state(current_state)
+        # Добавляем в хранилище данные текущего состония
+        await state.update_data(my_film_info=state_data)
+        # Устанавливаем текущее состояние
+        await state.set_state(current_state)
+
         await callback.message.edit_text(
-            text=title,
-            reply_markup=MyFilmsMenu.create_film_info_menu_kb()
+            text=text,
+            reply_markup=reply_markup(film_wiki_link)
+        )
+        await callback.answer()
+
+    # Этот хэндлер будет срабатывать при нажатии на
+    # кнопки "Оценка" и "Рецензия" в меню с информацией о фильме
+    @router.callback_query(F.data.in_(['my_film_rating', 'my_film_review']),
+                           StateFilter(FSMMyFilmsMenu.my_film_info))
+    async def process_my_film_rating_review_press(callback: CallbackQuery,
+                                                  state: FSMContext):
+        # Определяем нажатую кнопку
+        current_menu = callback.data
+        # Получаем данные из хранилища
+        storage_data = await state.get_data()
+        # Получаем данные о выбранном фильме
+        film_data = storage_data['my_film_info']['film_data']
+        # Получаем название, рейтинг и рецензию фильма
+        film_rating = film_data.get('rating')
+        film_review = film_data.get('review')
+        film_title = film_data.get('title')
+
+        # Определяем текст и данные кнопки в зависимости от
+        # нажатой кнопки и наличия рейтинга или рецензии
+        if current_menu == 'my_film_rating':
+            subject = 'Оценка'
+            if film_rating:
+                button_text = 'Изменить оценку'
+                button_callback_data = f'film_title-{film_title}'
+                attribute = film_rating
+            else:
+                button_text = 'Отправить оценку'
+                button_callback_data = f'film_title-{film_title}'
+                attribute = 'пока нет оценки'
+        else:
+            subject = 'Рецензия'
+            if film_review:
+                button_text = 'Изменить рецензию'
+                button_callback_data = 'edit_review'
+                attribute = film_review
+            else:
+                button_text = 'Написать рецензию'
+                button_callback_data = 'edit_review'
+                attribute = 'пока нет рецензии'
+
+        # Формируем данные для ответа и добавления в хранилище состояний
+        text = f'Фильм: {film_title}\n{subject}: {attribute}'
+        reply_markup = MyFilmsMenu.create_rating_review_menu_kb
+        button_data = (button_text, button_callback_data)
+        message_data = {'text': text, 'reply_markup': reply_markup,
+                        'button_data': button_data}
+        state_data = {'message_data': message_data}
+
+        if current_menu == 'my_film_rating':
+            # Текущее состояние
+            current_state = FSMMyFilmsMenu.my_film_rating
+            # Добавляем в хранилище данные текущего состония
+            await state.update_data(my_film_rating=state_data)
+        else:
+            # Текущее состояние
+            current_state = FSMMyFilmsMenu.my_film_review
+            # Добавляем в хранилище данные текущего состония
+            await state.update_data(my_film_review=state_data)
+        # Добавляем в односвязный список состояний текущее состояние
+        state_list.add_state(current_state)
+        # Устанавливаем текущее состояние
+        await state.set_state(current_state)
+
+        await callback.message.edit_text(
+            text=text,
+            reply_markup=reply_markup(button_text, button_callback_data)
         )
         await callback.answer()
